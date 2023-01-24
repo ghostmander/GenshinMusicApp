@@ -1,3 +1,4 @@
+import sys
 from src.songs import songSheet
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, QLabel, QSpacerItem, QSizePolicy
@@ -65,7 +66,7 @@ class Main(QMainWindow):
 
         # * Button
         # TODO: Make this button actually do something
-        self.button = QPushButton("Select Song")
+        self.button = QPushButton("Play")
         self.button.clicked.connect(self.the_button_was_clicked)
         self.songpicker_layout.addWidget(self.button)
 
@@ -99,7 +100,6 @@ class MyBar(QWidget):
     def __init__(self, parent):
         super(MyBar, self).__init__()
         self.parent = parent
-        print(self.parent.width())
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.title = QLabel("Genshin Music App")
@@ -166,4 +166,4 @@ class MyBar(QWidget):
 app = QApplication([])
 window = Main()
 window.show()
-app.exec_()
+sys.exit(app.exec_())
