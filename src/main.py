@@ -4,7 +4,7 @@ import time
 import ctypes
 import sys
 from pick import pick
-import transcriber as tr
+import src.transcriber as tr
 pydirectinput.PAUSE = 0.0
 
 
@@ -16,25 +16,29 @@ def is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin()
 
 
-if is_admin():
-    # Code of your program here
-    songs = tr.songSheet
+def main():
+    if is_admin():
+        # Code of your program here
+        songs = tr.songSheet
 
-    option, index = pick(list(songs.keys()), "Select a song",
-                         indicator="->", default_index=0)
+        option, index = pick(list(songs.keys()), "Select a song",
+                             indicator="->", default_index=0)
 
-    print(f"Playing {songs[option]['Name']} in 2 seconds...")
-    time.sleep(2)
+        for i in range(2, 0, -1):
+            print(f"Starting in {i}s...", end="\r")
+            time.sleep(1)
+        print(f"Playing {songs[option]['Name']}...")
+        # time.sleep(2)
 
-    song = songs[option]
-    bpm = song["BPM"]
-    for i in tr.songParser(song["notes"]):
-        if isinstance(i, int):
-            time.sleep(i/16 * bpm/240)
-            continue
-        pydirectinput.press(i)
+        song = songs[option]
+        bpm = song["BPM"]
+        for i in tr.songParser(song["notes"]):
+            if isinstance(i, int):
+                time.sleep(i/16 * bpm/240)
+                continue
+            pydirectinput.press(i)
 
-else:
-    # Re-run the program with admin rights
-    ctypes.windll.shell32.ShellExecuteW(
-        None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+    else:
+        # Re-run the program with admin rights
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, " ".join(sys.argv), None, 1)
