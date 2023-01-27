@@ -223,6 +223,15 @@ class MyBar(QWidget):
             """QPushButton:hover { background-color: #ff0000; }"""
         )
 
+        self.btn_max = QPushButton("ロ")
+        self.btn_max.clicked.connect(self.btn_max_clicked)
+        self.btn_max.setFixedSize(btn_size, btn_size)
+        self.btn_max.setStyleSheet(
+            """QPushButton { background-color: #000000FF; color: white; }"""
+            """QPushButton:hover { background-color: #303030; }"""
+        )
+        self.isMaximized = False
+
         self.btn_min = QPushButton("―")
         self.btn_min.clicked.connect(self.btn_min_clicked)
         self.btn_min.setFixedSize(btn_size, btn_size)
@@ -235,6 +244,7 @@ class MyBar(QWidget):
         self.title.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.title)
         self.layout.addWidget(self.btn_min)
+        self.layout.addWidget(self.btn_max)
         self.layout.addWidget(self.btn_close)
 
         self.title.setStyleSheet("background-color: #191919; color: white;")
@@ -267,6 +277,13 @@ class MyBar(QWidget):
 
     def btn_close_clicked(self):
         self.parent.close()
+
+    def btn_max_clicked(self):
+        if not self.isMaximized:
+            self.parent.showMaximized()
+        else:
+            self.parent.showNormal()
+        self.isMaximized = not self.isMaximized
 
     def btn_min_clicked(self):
         self.parent.showMinimized()
