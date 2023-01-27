@@ -62,6 +62,7 @@ class Main(QMainWindow):
         self.setCentralWidget(widget)
         widget.setLayout(self.layout)
 
+    # ? Experiment with QSpinBox
     def init_songpicker(self):
         self.songPicker = QComboBox(self)
         for song in songSheet:
@@ -129,6 +130,7 @@ class Main(QMainWindow):
         self.info_label.setWordWrap(True)
         self.infolabel_layout.addWidget(self.info_label)
 
+    # TODO: HANDLE DIFFERENT ENCODINGS
     def play_button_clicked(self):
         song = songSheet[self.songPicker.currentText()]
         self.play_button.setDisabled(True)
