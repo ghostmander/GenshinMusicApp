@@ -23,6 +23,7 @@ songSheet: dict[str: Song] = {
     "Test Song": {
         "Name": "Test Song",
         "BPM": 1000,
-        "notes": "1  2  3  4  5  6"
+        "notes": "1  2  3  4  5  6",
+        "Encoding": "default",
     }
 }

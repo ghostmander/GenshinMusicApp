@@ -5,6 +5,7 @@ import ctypes
 import sys
 from pick import pick
 import src.transcriber as tr
+import src.converter as cv
 pydirectinput.PAUSE = 0.0
 
 
@@ -17,8 +18,14 @@ def is_admin():
 
 
 def play_song(song):
+    encoding = song["Encoding"]
+    match encoding:
+        case "ABC[1-5]":
+            notes = cv.convertABC15(song["notes"])
+        case _:
+            notes = song["notes"]
     bpm = song["BPM"]
-    for i in tr.songParser(song["notes"]):
+    for i in tr.songParser(notes):
         if isinstance(i, int):
             time.sleep(i/16 * bpm/240)
             continue
