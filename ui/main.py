@@ -1,7 +1,10 @@
 import sys
+import pyautogui
+import pydirectinput
 from src.songs import songSheet
+from src.main import play_song
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, QLabel, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, QLabel, QSpacerItem, QSizePolicy as QSize
 from PyQt5.QtGui import QResizeEvent, QMouseEvent
 
 
@@ -17,8 +20,39 @@ class Main(QMainWindow):
         self.layout = QVBoxLayout()
         self.main_layout = QVBoxLayout()
         self.songpicker_layout = QHBoxLayout()
+        self.infolabel_layout = QVBoxLayout()
 
         # * Song Picker
+        self.init_songpicker()
+        # * Button
+        self.init_play_button()
+        # * Info Label
+        self.init_info_label()
+
+        # * Spacer
+        spacer = QSpacerItem(20, 40, QSize.Minimum, QSize.Expanding)
+
+        # * Layout Config
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.songpicker_layout.setContentsMargins(50, 0, 50, 0)
+        self.infolabel_layout.setContentsMargins(50, 0, 50, 0)
+
+        # * Add Widgets to Layouts
+        self.layout.addWidget(MyBar(self))
+        self.layout.addLayout(self.main_layout)
+        self.main_layout.addLayout(self.songpicker_layout)
+        self.main_layout.addLayout(self.infolabel_layout)
+        self.main_layout.addItem(spacer)
+
+        # * Window Settings
+        self.setMinimumSize(800, 400)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setWindowTitle("Genshin Music App")
+        self.setCentralWidget(widget)
+        widget.setLayout(self.layout)
+
+    def init_songpicker(self):
         self.songPicker = QComboBox(self)
         for song in songSheet:
             self.songPicker.addItem(song)
@@ -63,37 +97,39 @@ class Main(QMainWindow):
                 }
                 """
         )
+        self.songPicker.setCursor(Qt.PointingHandCursor)
 
-        # * Button
-        # TODO: Make this button actually do something
-        self.button = QPushButton("Play")
-        self.button.clicked.connect(self.the_button_was_clicked)
-        self.songpicker_layout.addWidget(self.button)
+    def init_play_button(self):
+        self.play_button = QPushButton("Play Song")
+        self.play_button.clicked.connect(self.play_button_clicked)
+        self.songpicker_layout.addWidget(self.play_button)
+        self.play_button.setStyleSheet(
+            """
+                QPushButton {
+                    border: 1px solid gray; border-radius: 9px; padding: 15px 5px; font-size: 20px;
+                }
 
-        # * Spacer
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum,
-                             QSizePolicy.Expanding)
+                QPushButton:hover { background-color: #303030;  }
+            """
+        )
+        self.play_button.setCursor(Qt.PointingHandCursor)
 
-        # * Layout Config
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.songpicker_layout.setContentsMargins(50, 0, 50, 0)
+    def init_info_label(self):
+        self.info_label = QLabel("This is a test")
+        self.info_label.setStyleSheet("font-size: 20px;")
+        self.infolabel_layout.addWidget(self.info_label)
 
-        # * Add Widgets to Layouts
-        self.layout.addWidget(MyBar(self))
-        self.layout.addLayout(self.main_layout)
-        self.main_layout.addLayout(self.songpicker_layout)
-        self.main_layout.addItem(spacer)
-
-        # * Window Settings
-        self.setMinimumSize(800, 400)
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setWindowTitle("Genshin Music App")
-        self.setCentralWidget(widget)
-        widget.setLayout(self.layout)
-
-    def the_button_was_clicked(self):
-        print(self.songPicker.currentText())
+    def play_button_clicked(self):
+        song = songSheet[self.songPicker.currentText()]
+        self.playing = True
+        self.play_button.setDisabled(True)
+        try:
+            play_song(song)
+            self.playing = False
+            self.play_button.setDisabled(False)
+            print("Finished playing song")
+        except pydirectinput.FailSafeException:
+            print("Stopping due to FailSafeException")
 
 
 class MyBar(QWidget):

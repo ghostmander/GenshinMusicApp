@@ -16,6 +16,15 @@ def is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin()
 
 
+def play_song(song):
+    bpm = song["BPM"]
+    for i in tr.songParser(song["notes"]):
+        if isinstance(i, int):
+            time.sleep(i/16 * bpm/240)
+            continue
+        pydirectinput.press(i)
+
+
 def main():
     if is_admin():
         # Code of your program here
