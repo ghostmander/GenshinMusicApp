@@ -17,7 +17,7 @@ def is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin()
 
 
-def play_song(song):
+def play_song(song, isCustom=False, bpm=None):
     encoding = song["Encoding"]
     match encoding:
         case "ABC[1-5]":

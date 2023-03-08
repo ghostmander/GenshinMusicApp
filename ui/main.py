@@ -1,11 +1,12 @@
 import sys
+import re
 import time
 import pyautogui
 import pydirectinput
 from src.songs import songSheet
 from src.main import play_song
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, QLabel, QSpacerItem, QSizePolicy as QSize, QSlider
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, QLabel, QSpacerItem, QSizePolicy as QSize, QSlider, QTextEdit
 from PyQt5.QtGui import QResizeEvent, QMouseEvent
 
 
@@ -62,11 +63,12 @@ class Main(QMainWindow):
         self.setCentralWidget(widget)
         widget.setLayout(self.layout)
 
-    # ? Experiment with QSpinBox
     def init_songpicker(self):
         self.songPicker = QComboBox(self)
         for song in songSheet:
             self.songPicker.addItem(song)
+        self.songPicker.addItem("Custom")
+        self.songPicker.currentIndexChanged.connect(self.songpicker_changed)
         self.songpicker_layout.addWidget(self.songPicker)
         self.songPicker.setStyleSheet(
             """
@@ -110,6 +112,32 @@ class Main(QMainWindow):
         )
         self.songPicker.setCursor(Qt.PointingHandCursor)
 
+    def songpicker_changed(self):
+        if self.songPicker.currentText() == "Custom":
+            self.customLabel = QLabel(
+                "Enter scripts from <a href=\"https://www.reddit.com/r/genshinmusicapp/\">r/genshinmusicapp</a>")
+            self.customLabel.setOpenExternalLinks(True)
+            self.customLabel.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            self.customLabel.setStyleSheet("font-size: 20px;")
+            self.customInput = QTextEdit()
+            self.customInput.setStyleSheet(
+                """
+                    QTextEdit {
+                        border: 1px solid gray; border-radius: 9px; font-size: 20px;
+                    }
+                """
+            )
+            self.song_config_layout.addWidget(self.customLabel)
+            self.song_config_layout.addWidget(self.customInput)
+        else:
+            try:
+                self.song_config_layout.removeWidget(self.customLabel)
+                self.song_config_layout.removeWidget(self.customInput)
+                self.customLabel.deleteLater()
+                self.customInput.deleteLater()
+            except:
+                pass
+
     def init_play_button(self):
         self.play_button = QPushButton("Play Song")
         self.play_button.clicked.connect(self.play_button_clicked)
@@ -130,12 +158,26 @@ class Main(QMainWindow):
         self.info_label.setWordWrap(True)
         self.infolabel_layout.addWidget(self.info_label)
 
-    # TODO: HANDLE DIFFERENT ENCODINGS
     def play_button_clicked(self):
-        song = songSheet[self.songPicker.currentText()]
+        isCustom = False
+        if self.songPicker.currentText() == "Custom":
+            isCustom = True
+            song = self.customInput.toPlainText()
+            m = re.match("""((?P<name>.*?) BPM:(?P<BPM>\d+) \|\| )?(?P<notes>.+)""",
+                         song, re.DOTALL)
+            notes = m.group("notes")
+            song = {
+                "Name": m.group("name"),
+                "BPM": int(m.group("BPM")),
+                "notes": notes,
+                "Encoding": "default"
+            }
+        else:
+            song = songSheet[self.songPicker.currentText()]
         self.play_button.setDisabled(True)
+
         try:
-            print(song)
+            # print(song)
             self.info_label.setStyleSheet("font-size: 30px; color: white;")
             self.info_label.setAlignment(Qt.AlignLeft)
             for i in range(self.delay_slider.value(), 0, -1):
@@ -147,10 +189,10 @@ class Main(QMainWindow):
                 # f"Notes:\t\t{song['notes']}\n"
                 f"\nTo stop the song, move your mouse to the top left corner of your screen\n"
             )
-            # ! Dont know why but this is needed to make the label update
+            # ! Don't know why, but this is needed to update the label
             for _ in range(10):
                 QApplication.processEvents()
-            play_song(song)
+            play_song(song, isCustom)
             self.play_button.setDisabled(False)
             self.info_label.setText(f"Song Finished!!")
             color = "#00FFFF"
@@ -158,6 +200,7 @@ class Main(QMainWindow):
             self.info_label.setText(f"Song Stopped by mouse movement.")
             color = "#FF3030"
         except Exception as e:
+            print(e)
             self.info_label.setText(f"Error: {e}")
             color = "#FF3030"
         finally:

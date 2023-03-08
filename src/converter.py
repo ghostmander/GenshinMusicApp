@@ -27,21 +27,21 @@ def findGap(gapNum):
 
 def convertABC15(song: str):
     mapping = {
-        "C1": "15 ",
-        "C2": "16 ",
-        "C3": "17 ",
-        "C4": "18 ",
-        "C5": "19 ",
-        "B1": "8 ",
-        "B2": "9 ",
-        "B3": "10 ",
-        "B4": "11 ",
-        "B5": "12 ",
-        "A1": "1 ",
-        "A2": "2 ",
-        "A3": "3 ",
-        "A4": "4 ",
-        "A5": "5 "
+        "C1": 15,
+        "C2": 16,
+        "C3": 17,
+        "C4": 18,
+        "C5": 19,
+        "B1": 8,
+        "B2": 9,
+        "B3": 10,
+        "B4": 11,
+        "B5": 12,
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "A4": 4,
+        "A5": 5
     }
     finalSheet = ""
     gap = 0
@@ -55,7 +55,7 @@ def convertABC15(song: str):
                 gap = 0
             currBeat = beat
             for note in mapping:
-                currBeat = currBeat.replace(note, mapping[note])
+                currBeat = currBeat.replace(note, f"{mapping[note]} ")
             finalSheet += f"{currBeat}"
 
     return finalSheet

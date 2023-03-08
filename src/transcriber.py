@@ -95,5 +95,6 @@ def songParser(songNotes: str, encoding: str = "default"):
 
 if __name__ == "__main__":
     # Test
-    print("Song: ", songParser(
-        songSheet["Alhaitham demo"]["notes"] + "  1 k |"))
+    print(songParser("1  2  3  4"))
+    # print("Song: ", songParser(
+    #     songSheet["Alhaitham demo"]["notes"] + "  1 k |"))
