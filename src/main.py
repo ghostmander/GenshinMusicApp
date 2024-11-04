@@ -1,60 +1,38 @@
-import pyautogui
+# import pyautogui
 import pydirectinput
 import time
 import ctypes
 import sys
 from pick import pick
-import src.transcriber as tr
-import src.converter as cv
+from src import song_parser, Song, songSheet, play_song
 pydirectinput.PAUSE = 0.0
 
 
-def inputParser(inp):
-    return [i.split('-') if len(i) > 1 else [i] for i in inp.split()]
+def _display_loader(n_secs: int = 2, fmt_str: str = "Starting in {n}s...", done_msg: str = "Playing song...") -> None:
+    """
+    Displays a loader for the user.
 
-
-def is_admin():
-    return ctypes.windll.shell32.IsUserAnAdmin()
-
-
-def play_song(song, isCustom=False, bpm=None):
-    encoding = song["Encoding"]
-    match encoding:
-        case "ABC[1-5]":
-            notes = cv.convertABC15(song["notes"])
-        case _:
-            notes = song["notes"]
-    bpm = song["BPM"]
-    for i in tr.songParser(notes):
-        if isinstance(i, int):
-            time.sleep(i/16 * bpm/240)
-            continue
-        pydirectinput.press(i)
-
+    :param n_secs: Number of seconds to display the loader
+    :type n_secs: int
+    :param fmt_str: Format string for the loader
+    :type fmt_str: str
+    :return: None
+    """
+    for i in range(n_secs, 0, -1):
+        print(fmt_str.format(n=i), end="\r")
+        time.sleep(1)
+    print(done_msg.ljust(len(fmt_str.format(n=n_secs))))
 
 def main():
-    if is_admin():
-        # Code of your program here
-        songs = tr.songSheet
+    # Check if the user is an admin
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+        return
 
-        option, index = pick(list(songs.keys()), "Select a song",
-                             indicator="->", default_index=0)
+    option, index = pick(list(songSheet.keys()), "Select a song", indicator="->", default_index=0)
+    _display_loader(n_secs=2, fmt_str="Starting in {n}s...", done_msg=f"Playing {songSheet[option].name}...")
+    play_song(songSheet[option])
 
-        for i in range(2, 0, -1):
-            print(f"Starting in {i}s...", end="\r")
-            time.sleep(1)
-        print(f"Playing {songs[option]['Name']}...")
-        # time.sleep(2)
 
-        song = songs[option]
-        bpm = song["BPM"]
-        for i in tr.songParser(song["notes"]):
-            if isinstance(i, int):
-                time.sleep(i/16 * bpm/240)
-                continue
-            pydirectinput.press(i)
-
-    else:
-        # Re-run the program with admin rights
-        ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+if __name__ == "__main__":
+    main()

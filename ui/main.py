@@ -1,13 +1,28 @@
 import sys
 import re
 import time
+import logging
 import pyautogui
 import pydirectinput
-from src.songs import songSheet
-from src.main import play_song
+from src import songSheet, play_song, Song
+from typing import Optional as Opt
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, QLabel, QSpacerItem, QSizePolicy as QSize, QSlider, QTextEdit
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton, QApplication, QMainWindow, \
+    QLabel, QSpacerItem, QSizePolicy as QSize, QSlider, QTextEdit
 from PyQt5.QtGui import QResizeEvent, QMouseEvent
+
+logging.basicConfig()
+LOGGER = logging.getLogger("genshin-music-app")
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    LOGGER.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+sys.excepthook = handle_exception
 
 
 class Main(QMainWindow):
@@ -25,6 +40,15 @@ class Main(QMainWindow):
         self.delay_layout = QVBoxLayout()
         self.song_config_layout = QVBoxLayout()
         self.infolabel_layout = QVBoxLayout()
+
+        # * Define Widget variables
+        self.song_picker: Opt[QComboBox] = None
+        self.custom_label: Opt[QLabel] = None
+        self.custom_input: Opt[QTextEdit] = None
+        self.play_button: Opt[QPushButton] = None
+        self.info_label: Opt[QLabel] = None
+        self.delay_slider: Opt[QSlider] = None
+        self.delay_label: Opt[QLabel] = None
 
         # * Song Picker
         self.init_songpicker()
@@ -47,7 +71,7 @@ class Main(QMainWindow):
         self.infolabel_layout.setContentsMargins(50, 0, 50, 0)
 
         # * Add Widgets to Layouts
-        self.layout.addWidget(MyBar(self))
+        self.layout.addWidget(MyBar(parent=self, title="Genshin Music App"))
         self.layout.addLayout(self.main_layout)
         self.main_layout.addLayout(self.song_config_layout)
         self.song_config_layout.addLayout(self.songpicker_layout)
@@ -64,14 +88,16 @@ class Main(QMainWindow):
         widget.setLayout(self.layout)
 
     def init_songpicker(self):
-        self.songPicker = QComboBox(self)
+        """Initialize the song picker dropdown."""
+
+        self.song_picker = QComboBox(self)
         for song in songSheet:
-            self.songPicker.addItem(song)
-        self.songPicker.addItem("Custom")
-        self.songPicker.currentIndexChanged.connect(self.songpicker_changed)
-        self.songpicker_layout.addWidget(self.songPicker)
-        self.songPicker.setStyleSheet(
-            """
+            self.song_picker.addItem(song)
+        self.song_picker.addItem("Custom")
+        self.song_picker.currentIndexChanged.connect(self.songpicker_changed)
+        self.songpicker_layout.addWidget(self.song_picker)
+        self.song_picker.setCursor(Qt.PointingHandCursor)
+        self.song_picker.setStyleSheet("""
                 QComboBox {
                     border: 1px solid gray; border-radius: 9px; padding: 15px 5px; font-size: 20px;
                 }
@@ -108,100 +134,83 @@ class Main(QMainWindow):
                     outline: 0;
                     selection-background-color: black;
                 }
-                """
-        )
-        self.songPicker.setCursor(Qt.PointingHandCursor)
+                """)
 
     def songpicker_changed(self):
-        if self.songPicker.currentText() == "Custom":
-            self.customLabel = QLabel(
+        if self.song_picker.currentText() == "Custom":
+            self.custom_label = QLabel(
                 "Enter scripts from <a href=\"https://www.reddit.com/r/genshinmusicapp/\">r/genshinmusicapp</a>")
-            self.customLabel.setOpenExternalLinks(True)
-            self.customLabel.setTextInteractionFlags(Qt.TextBrowserInteraction)
-            self.customLabel.setStyleSheet("font-size: 20px;")
-            self.customInput = QTextEdit()
-            self.customInput.setStyleSheet(
+            self.custom_label.setOpenExternalLinks(True)
+            self.custom_label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            self.custom_label.setStyleSheet("font-size: 20px;")
+            self.custom_input = QTextEdit()
+            self.custom_input.setStyleSheet(
                 """
                     QTextEdit {
                         border: 1px solid gray; border-radius: 9px; font-size: 20px;
                     }
                 """
             )
-            self.song_config_layout.addWidget(self.customLabel)
-            self.song_config_layout.addWidget(self.customInput)
-        else:
-            try:
-                self.song_config_layout.removeWidget(self.customLabel)
-                self.song_config_layout.removeWidget(self.customInput)
-                self.customLabel.deleteLater()
-                self.customInput.deleteLater()
-            except:
-                pass
-
-    def init_play_button(self):
-        self.play_button = QPushButton("Play Song")
-        self.play_button.clicked.connect(self.play_button_clicked)
-        self.songpicker_layout.addWidget(self.play_button)
-        self.play_button.setStyleSheet(
-            """
-                QPushButton {
-                    border: 1px solid gray; border-radius: 9px; padding: 15px 5px; font-size: 20px;
-                }
-
-                QPushButton:hover { background-color: #303030;  }
-            """
-        )
-        self.play_button.setCursor(Qt.PointingHandCursor)
+            self.song_config_layout.addWidget(self.custom_label)
+            self.song_config_layout.addWidget(self.custom_input)
+            return
+        self.song_config_layout.removeWidget(self.custom_label)
+        self.song_config_layout.removeWidget(self.custom_input)
+        self.custom_label.deleteLater()
+        self.custom_input.deleteLater()
 
     def init_info_label(self):
         self.info_label = QLabel("")
         self.info_label.setWordWrap(True)
         self.infolabel_layout.addWidget(self.info_label)
 
-    def play_button_clicked(self):
-        isCustom = False
-        if self.songPicker.currentText() == "Custom":
-            isCustom = True
-            song = self.customInput.toPlainText()
-            m = re.match("""((?P<name>.*?) BPM:(?P<BPM>\d+) \|\| )?(?P<notes>.+)""",
-                         song, re.DOTALL)
-            notes = m.group("notes")
-            song = {
-                "Name": m.group("name"),
-                "BPM": int(m.group("BPM")),
-                "notes": notes,
-                "Encoding": "default"
-            }
-        else:
-            song = songSheet[self.songPicker.currentText()]
-        self.play_button.setDisabled(True)
+    def init_play_button(self):
+        self.play_button = QPushButton("Play Song")
+        self.play_button.clicked.connect(self.play_button_clicked)
+        self.songpicker_layout.addWidget(self.play_button)
+        self.play_button.setCursor(Qt.PointingHandCursor)
+        self.play_button.setStyleSheet("""
+                QPushButton {
+                    border: 1px solid gray; border-radius: 9px; padding: 15px 5px; font-size: 20px;
+                }
 
+                QPushButton:hover { background-color: #303030;  }
+            """)
+
+    def _show_delay(self, delay: int, fmt_str: str = "Starting in {n}s...",
+                    final_msg: str = "To stop the song, move your mouse to the top left corner of your screen"):
+        for i in range(delay, 0, -1):
+            self.info_label.setText(fmt_str.format(n=i))
+            QApplication.processEvents()
+            time.sleep(1)
+        self.info_label.setText(final_msg)
+        # ! Don't know why, but this is needed to update the label
+        for _ in range(10):
+            QApplication.processEvents()
+
+    def play_button_clicked(self):
+        is_custom = False
+        if self.song_picker.currentText() == "Custom":
+            is_custom = True
+            song = self.custom_input.toPlainText()
+            m = re.match("""((?P<name>.*?) BPM:(?P<BPM>\d+) \|\| )?(?P<notes>.+)""", song, re.DOTALL)
+            song = Song(name=m.group("name"), bpm=int(m.group("BPM")), notes=m.group("notes"))
+        else:
+            song = songSheet[self.song_picker.currentText()]
+        self.play_button.setDisabled(True)
+        color = "#FF3030"
         try:
-            # print(song)
             self.info_label.setStyleSheet("font-size: 30px; color: white;")
             self.info_label.setAlignment(Qt.AlignLeft)
-            for i in range(self.delay_slider.value(), 0, -1):
-                self.info_label.setText(f"Starting in {i}s...")
-                QApplication.processEvents()
-                time.sleep(1)
-            self.info_label.setText(
-                f"Now Playing:\t{song['Name']}\n"
-                # f"Notes:\t\t{song['notes']}\n"
-                f"\nTo stop the song, move your mouse to the top left corner of your screen\n"
+            self._show_delay(
+                delay=self.delay_slider.value(), fmt_str="Starting in {n}s...",
+                final_msg=f"Now Playing:\t{song.name}\nTo stop the song, move your mouse to the top left corner of your screen\n"
             )
-            # ! Don't know why, but this is needed to update the label
-            for _ in range(10):
-                QApplication.processEvents()
-            play_song(song, isCustom)
-            self.play_button.setDisabled(False)
+            play_song(song, is_custom)
             self.info_label.setText(f"Song Finished!!")
             color = "#00FFFF"
         except pydirectinput.FailSafeException:
             self.info_label.setText(f"Song Stopped by mouse movement.")
-            color = "#FF3030"
-        except Exception as e:
-            print(e)
-            self.info_label.setText(f"Error: {e}")
             color = "#FF3030"
         finally:
             self.info_label.setStyleSheet(f"font-size: 40px; color: {color};")
@@ -215,12 +224,12 @@ class Main(QMainWindow):
         self.delay_slider.setTickInterval(1)
         self.delay_slider.setTickPosition(QSlider.TicksBelow)
         self.delay_slider.setSingleStep(1)
+
         # Label for the slider
         self.delay_label = QLabel("Delay: 2s")
         self.delay_label.setStyleSheet("font-size: 20px; color: white;")
         self.delay_layout.addWidget(self.delay_label)
-        self.delay_slider.valueChanged.connect(
-            lambda: self.delay_label.setText(f"Delay: {self.delay_slider.value()}s"))
+        self.delay_slider.valueChanged.connect(lambda: self.delay_label.setText(f"Delay: {self.delay_slider.value()}s"))
         # Styling the slider
         self.delay_slider.setStyleSheet("""
             QSlider::groove:horizontal {
@@ -249,41 +258,39 @@ class Main(QMainWindow):
 
 
 class MyBar(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, title: str = "", btn_size: int = 35, *args, **kwargs):
         super(MyBar, self).__init__()
         self.parent = parent
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
-        self.title = QLabel("Genshin Music App")
+        self.title = QLabel(title)
 
         btn_size = 35
 
         self.btn_close = QPushButton("✕")
-        self.btn_close.clicked.connect(self.btn_close_clicked)
+        self.btn_close.clicked.connect(self.parent.close)
         self.btn_close.setFixedSize(btn_size, btn_size)
-        self.btn_close.setStyleSheet(
-            """QPushButton { background-color: #000000FF; color: white; }"""
-            """QPushButton:hover { background-color: #ff0000; }"""
-        )
+        self.btn_close.setStyleSheet("""
+            QPushButton { background-color: #000000FF; color: white; }
+            QPushButton:hover { background-color: #ff0000; }
+            """)
 
         self.btn_max = QPushButton("ロ")
         self.btn_max.clicked.connect(self.btn_max_clicked)
         self.btn_max.setFixedSize(btn_size, btn_size)
-        self.btn_max.setStyleSheet(
-            """QPushButton { background-color: #000000FF; color: white; }"""
-            """QPushButton:hover { background-color: #303030; }"""
-        )
+        self.btn_max.setStyleSheet("""
+        QPushButton { background-color: #000000FF; color: white; }
+        QPushButton:hover { background-color: #303030; }""")
         self.isMaximized = False
 
         self.btn_min = QPushButton("―")
-        self.btn_min.clicked.connect(self.btn_min_clicked)
+        self.btn_min.clicked.connect(self.parent.showMinimized)
         self.btn_min.setFixedSize(btn_size, btn_size)
-        self.btn_min.setStyleSheet(
-            """QPushButton { background-color: #000000FF; color: white; }"""
-            """QPushButton:hover { background-color: #303030; }"""
-        )
+        self.btn_min.setStyleSheet("""
+        QPushButton { background-color: #000000FF; color: white; }
+        QPushButton:hover { background-color: #303030; }""")
 
-        self.title.setFixedHeight(35)
+        self.title.setFixedHeight(btn_size)
         self.title.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.title)
         self.layout.addWidget(self.btn_min)
@@ -294,45 +301,43 @@ class MyBar(QWidget):
         self.setLayout(self.layout)
         self.setStyleSheet("background-color: #000; color: white;")
         self.start = QPoint(0, 0)
+        self.end = self.start
+        self.movement = self.end - self.start
         self.pressing = False
         self.setMaximumHeight(btn_size)
 
-    def resizeEvent(self, QResizeEvent):
-        super(MyBar, self).resizeEvent(QResizeEvent)
+    def resizeEvent(self, event: QResizeEvent):
+        super(MyBar, self).resizeEvent(event)
         self.title.setFixedWidth(self.parent.width())
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
         self.start = self.mapToGlobal(event.pos())
         self.pressing = True
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent):
         if self.pressing:
             self.end = self.mapToGlobal(event.pos())
-            self.movement = self.end-self.start
+            self.movement = self.end - self.start
             self.parent.setGeometry(self.mapToGlobal(self.movement).x(),
                                     self.mapToGlobal(self.movement).y(),
                                     self.parent.width(),
                                     self.parent.height())
             self.start = self.end
 
-    def mouseReleaseEvent(self, QMouseEvent):
+    def mouseReleaseEvent(self, event: QMouseEvent):
         self.pressing = False
 
-    def btn_close_clicked(self):
-        self.parent.close()
-
     def btn_max_clicked(self):
-        if not self.isMaximized:
-            self.parent.showMaximized()
-        else:
-            self.parent.showNormal()
+        (self.parent.showNormal if self.isMaximized else self.parent.showMaximized)()
         self.isMaximized = not self.isMaximized
 
-    def btn_min_clicked(self):
-        self.parent.showMinimized()
+
+def run_app():
+    app = QApplication([])
+    window = Main()
+    window.show()
+    sys.exit(app.exec_())
 
 
-app = QApplication([])
-window = Main()
-window.show()
-sys.exit(app.exec_())
+if __name__ == "__main__":
+    run_app()

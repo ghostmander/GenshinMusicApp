@@ -1,4 +1,4 @@
-from src.main import main
-import ui.main
-# if __name__ == "__main__":
-#     main()
+from ui import run_app
+
+if __name__ == "__main__":
+    run_app()
